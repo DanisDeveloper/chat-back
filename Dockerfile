@@ -10,4 +10,4 @@ COPY . .
 
 RUN uv sync
 
-ENTRYPOINT ["uv", "run", "python", "main.py"]
+ENTRYPOINT ["uv", "run", "python", "-m", "app.main"]
