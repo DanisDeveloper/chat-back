@@ -3,6 +3,8 @@ from fastapi import FastAPI
 from starlette.websockets import WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+from connection_manager import ConnectionManager
+
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -10,9 +12,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
-clients = {}
-i = 0
 
+connection_manager = ConnectionManager()
 
 @app.get("/")
 async def root():
@@ -21,23 +22,14 @@ async def root():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    global i
-    await websocket.accept()
-    if websocket not in clients:
-        clients[websocket] = f"{i}"
-        i += 1
+    await connection_manager.connect(websocket)
 
     try:
         while True:
             data = await websocket.receive_text()
-            for client_ws, _ in clients.items():
-                try:
-                    await client_ws.send_text(f"{clients[websocket]}: {data}")
-                except Exception as e:
-                    print(e)
-
+            await connection_manager.broadcast(websocket, data)
     except WebSocketDisconnect:
-        del clients[websocket]
+        connection_manager.disconnect(websocket)
 
 
 if __name__ == '__main__':
